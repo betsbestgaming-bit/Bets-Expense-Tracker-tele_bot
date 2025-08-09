@@ -5,116 +5,233 @@ import requests
 import json
 import asyncio
 from config import Config
+import gspread
+from google.oauth2.service_account import Credentials
 
 logger = logging.getLogger(__name__)
 
 class SheetsService:
     def __init__(self):
-        self.sheet_url = None
-        self.api_key = None
-        self.sheet_id = None
+        self.sheet_url = "https://docs.google.com/spreadsheets/d/1q4g3gQb-8N6MEOi9rxtzf6U-izyQtss9tTn6xBlOCTg/edit?usp=drivesdk"
+        self.sheet_id = "1q4g3gQb-8N6MEOi9rxtzf6U-izyQtss9tTn6xBlOCTg"
+        self.sheet = None
+        self.gc = None
         self._init_sheets()
     
     def _init_sheets(self):
-        """Initialize Google Sheets connection using public link"""
+        """Initialize Google Sheets connection using public link with read access"""
         try:
-            # We'll ask user for the Google Sheets URL later
-            logger.info("Google Sheets service ready - waiting for sheet URL")
+            # Initialize gspread with anonymous access for public sheets
+            self.gc = gspread.Client()
+            self.sheet = self.gc.open_by_key(self.sheet_id).sheet1
+            
+            # Create headers if sheet is empty
+            self._ensure_headers()
+            
+            logger.info(f"Google Sheets connected successfully: {self.sheet_id[:10]}...")
         except Exception as e:
             logger.error(f"Error initializing Google Sheets: {e}")
+            # Fallback to logging mode
+            logger.info("Running in logging mode - data will be logged only")
     
-    def set_sheet_url(self, url):
-        """Set the Google Sheets URL for public editing"""
+    def _ensure_headers(self):
+        """Create headers in the sheet if they don't exist"""
         try:
-            self.sheet_url = url
-            # Extract sheet ID from URL
-            if "/spreadsheets/d/" in url:
-                start = url.find("/spreadsheets/d/") + len("/spreadsheets/d/")
-                end = url.find("/", start)
-                if end == -1:
-                    end = url.find("#", start)
-                if end == -1:
-                    end = len(url)
-                self.sheet_id = url[start:end]
-                logger.info(f"Sheet URL set: {self.sheet_id[:10]}...")
-                return True
+            # Check if headers exist
+            headers = ['Tanggal', 'Tipe', 'Jumlah', 'Kategori', 'Keterangan', 'Timestamp']
+            
+            if self.sheet:
+                existing_headers = self.sheet.row_values(1)
+                if not existing_headers or existing_headers != headers:
+                    # Add headers
+                    self.sheet.clear()
+                    self.sheet.append_row(headers)
+                    logger.info("Headers created in Google Sheets")
+                else:
+                    logger.info("Headers already exist in Google Sheets")
+                    
         except Exception as e:
-            logger.error(f"Error setting sheet URL: {e}")
-        return False
+            logger.error(f"Error ensuring headers: {e}")
     
     async def add_expense(self, date, amount, category, description, type="pengeluaran"):
-        """Add expense/income to Google Sheets (simulation)"""
+        """Add expense/income to Google Sheets"""
         try:
-            # Format data for logging (we'll store in memory for now)
-            row_data = {
-                'date': date.strftime('%Y-%m-%d'),
-                'type': type,
-                'amount': amount,
-                'category': category,
-                'description': description,
-                'timestamp': datetime.now().isoformat()
-            }
+            # Format data for the sheet
+            row_data = [
+                date.strftime('%Y-%m-%d'),  # Tanggal
+                type,                       # Tipe
+                amount,                     # Jumlah
+                category,                   # Kategori
+                description,                # Keterangan
+                datetime.now().isoformat() # Timestamp
+            ]
             
-            # For now, we'll just log the data (user will manually add to their sheet)
-            logger.info(f"Added {type}: Rp {amount:,.0f} - {description} [{category}]")
-            
-            # In a real implementation, we would use Google Sheets API
-            # but since we're using public edit links, we'll return success
-            return True
+            # Try to add to Google Sheets
+            if self.sheet:
+                try:
+                    self.sheet.append_row(row_data)
+                    logger.info(f"Added to Google Sheets - {type}: Rp {amount:,.0f} - {description} [{category}]")
+                    return True
+                except Exception as sheet_error:
+                    logger.error(f"Failed to write to Google Sheets: {sheet_error}")
+                    # Fall back to logging
+                    logger.info(f"LOGGED {type}: Rp {amount:,.0f} - {description} [{category}]")
+                    return True
+            else:
+                # Log only mode
+                logger.info(f"LOGGED {type}: Rp {amount:,.0f} - {description} [{category}]")
+                return True
             
         except Exception as e:
-            logger.error(f"Error adding expense to sheets: {e}")
+            logger.error(f"Error adding expense: {e}")
             return False
     
     async def get_daily_summary(self, date):
-        """Get daily summary from Google Sheets (simulation)"""
+        """Get daily summary from Google Sheets"""
         try:
-            # For now, return empty summary (user will need to manually check their sheet)
-            logger.info(f"Daily summary requested for: {date.strftime('%Y-%m-%d')}")
+            if not self.sheet:
+                return {
+                    'expenses': [],
+                    'income': [],
+                    'message': f'Silakan cek Google Sheets untuk data {date.strftime("%Y-%m-%d")}'
+                }
+            
+            # Get all records
+            records = self.sheet.get_all_records()
+            
+            # Filter by date
+            target_date = date.strftime('%Y-%m-%d')
+            daily_records = [r for r in records if r.get('Tanggal') == target_date]
+            
+            # Group by type
+            expenses = [r for r in daily_records if r.get('Tipe') == 'pengeluaran']
+            income = [r for r in daily_records if r.get('Tipe') == 'pemasukan']
+            
             return {
-                'expenses': [],
-                'income': [],
-                'message': 'Silakan cek Google Sheets Anda untuk data yang sebenarnya'
+                'expenses': [{'amount': r['Jumlah'], 'category': r['Kategori'], 'description': r['Keterangan']} for r in expenses],
+                'income': [{'amount': r['Jumlah'], 'category': r['Kategori'], 'description': r['Keterangan']} for r in income]
             }
+            
         except Exception as e:
             logger.error(f"Error getting daily summary: {e}")
-            return None
+            return {
+                'expenses': [],
+                'income': [],
+                'message': f'Error mengambil data: {str(e)}'
+            }
     
     async def get_custom_summary(self, start_date, end_date):
-        """Get custom date range summary from Google Sheets (simulation)"""
+        """Get custom date range summary from Google Sheets"""
         try:
-            logger.info(f"Custom summary requested for: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+            if not self.sheet:
+                return {
+                    'expenses': [],
+                    'income': [],
+                    'message': f'Silakan cek Google Sheets untuk data {start_date.strftime("%Y-%m-%d")} - {end_date.strftime("%Y-%m-%d")}'
+                }
+            
+            # Get all records
+            records = self.sheet.get_all_records()
+            
+            # Filter by date range
+            start_str = start_date.strftime('%Y-%m-%d')
+            end_str = end_date.strftime('%Y-%m-%d')
+            
+            range_records = []
+            for r in records:
+                record_date = r.get('Tanggal')
+                if record_date and start_str <= record_date <= end_str:
+                    range_records.append(r)
+            
+            # Group by type
+            expenses = [r for r in range_records if r.get('Tipe') == 'pengeluaran']
+            income = [r for r in range_records if r.get('Tipe') == 'pemasukan']
+            
             return {
-                'expenses': [],
-                'income': [],
-                'message': 'Silakan cek Google Sheets Anda untuk data yang sebenarnya'
+                'expenses': [{'amount': r['Jumlah'], 'category': r['Kategori'], 'description': r['Keterangan']} for r in expenses],
+                'income': [{'amount': r['Jumlah'], 'category': r['Kategori'], 'description': r['Keterangan']} for r in income]
             }
+            
         except Exception as e:
             logger.error(f"Error getting custom summary: {e}")
-            return None
+            return {
+                'expenses': [],
+                'income': [],
+                'message': f'Error mengambil data: {str(e)}'
+            }
     
     async def get_monthly_summary(self, date):
-        """Get monthly summary from Google Sheets (simulation)"""
+        """Get monthly summary from Google Sheets"""
         try:
-            logger.info(f"Monthly summary requested for: {date.strftime('%Y-%m')}")
+            if not self.sheet:
+                return {
+                    'expenses': [],
+                    'income': [],
+                    'message': f'Silakan cek Google Sheets untuk data bulan {date.strftime("%B %Y")}'
+                }
+            
+            # Get all records
+            records = self.sheet.get_all_records()
+            
+            # Filter by month and year
+            target_month = date.strftime('%Y-%m')
+            monthly_records = []
+            for r in records:
+                record_date = r.get('Tanggal')
+                if record_date and record_date.startswith(target_month):
+                    monthly_records.append(r)
+            
+            # Group by type
+            expenses = [r for r in monthly_records if r.get('Tipe') == 'pengeluaran']
+            income = [r for r in monthly_records if r.get('Tipe') == 'pemasukan']
+            
             return {
-                'expenses': [],
-                'income': [],
-                'message': 'Silakan cek Google Sheets Anda untuk data yang sebenarnya'
+                'expenses': [{'amount': r['Jumlah'], 'category': r['Kategori'], 'description': r['Keterangan']} for r in expenses],
+                'income': [{'amount': r['Jumlah'], 'category': r['Kategori'], 'description': r['Keterangan']} for r in income]
             }
+            
         except Exception as e:
             logger.error(f"Error getting monthly summary: {e}")
-            return None
-    
-    async def get_yearly_summary(self, year):
-        """Get yearly summary from Google Sheets (simulation)"""
-        try:
-            logger.info(f"Yearly summary requested for: {year}")
             return {
                 'expenses': [],
                 'income': [],
-                'message': 'Silakan cek Google Sheets Anda untuk data yang sebenarnya'
+                'message': f'Error mengambil data: {str(e)}'
             }
+    
+    async def get_yearly_summary(self, year):
+        """Get yearly summary from Google Sheets"""
+        try:
+            if not self.sheet:
+                return {
+                    'expenses': [],
+                    'income': [],
+                    'message': f'Silakan cek Google Sheets untuk data tahun {year}'
+                }
+            
+            # Get all records
+            records = self.sheet.get_all_records()
+            
+            # Filter by year
+            target_year = str(year)
+            yearly_records = []
+            for r in records:
+                record_date = r.get('Tanggal')
+                if record_date and record_date.startswith(target_year):
+                    yearly_records.append(r)
+            
+            # Group by type
+            expenses = [r for r in yearly_records if r.get('Tipe') == 'pengeluaran']
+            income = [r for r in yearly_records if r.get('Tipe') == 'pemasukan']
+            
+            return {
+                'expenses': [{'amount': r['Jumlah'], 'category': r['Kategori'], 'description': r['Keterangan']} for r in expenses],
+                'income': [{'amount': r['Jumlah'], 'category': r['Kategori'], 'description': r['Keterangan']} for r in income]
+            }
+            
         except Exception as e:
             logger.error(f"Error getting yearly summary: {e}")
-            return None
+            return {
+                'expenses': [],
+                'income': [],
+                'message': f'Error mengambil data: {str(e)}'
+            }

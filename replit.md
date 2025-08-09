@@ -1,6 +1,14 @@
 # Overview
 
-This is an Indonesian Telegram expense tracking bot that helps users manage their personal finances through multiple input methods. The bot can process receipt photos using OCR, voice messages, and text commands to automatically categorize and record expenses/income to Google Sheets. It provides comprehensive reporting features including daily, monthly, and yearly summaries with custom date range support.
+This is an Indonesian Telegram expense tracking bot that helps users manage their personal finances through multiple input methods. The bot can process receipt photos using OCR, voice messages, and text commands to automatically categorize and record expenses/income. It uses free Gemini AI for processing instead of OpenAI, and has been configured to work with Google Sheets integration. The system provides comprehensive reporting features including daily, monthly, and yearly summaries with custom date range support.
+
+## Recent Changes (2025-08-09)
+- ✓ Replaced OpenAI with free Gemini AI integration for receipt OCR and text processing
+- ✓ Implemented simplified Google Sheets service with logging fallback
+- ✓ Fixed all telegram package conflicts and import errors  
+- ✓ Configured automatic header creation in Google Sheets: Tanggal, Tipe, Jumlah, Kategori, Keterangan, Timestamp
+- ✓ System now runs successfully with logging mode when Google Sheets auth is not available
+- ✓ Integrated user's Google Sheets URL: 1q4g3gQb-8N6MEOi9rxtzf6U-izyQtss9tTn6xBlOCTg
 
 # User Preferences
 
@@ -19,8 +27,8 @@ Preferred communication style: Simple, everyday language.
 - **Modular Service Architecture**: Separated concerns with dedicated services for OpenAI, Google Sheets, and date utilities
 
 ## Core Services
-- **OpenAIService**: Receipt OCR using GPT-4o vision model for expense extraction from photos
-- **SheetsService**: Google Sheets integration for persistent data storage using service account authentication
+- **GeminiService**: Receipt OCR using Gemini vision model for expense extraction from photos (replaces OpenAI)
+- **SheetsService**: Google Sheets integration with logging fallback for data persistence
 - **DateUtils**: Indonesian date parsing and formatting utilities with localized month names
 - **BotHandlers**: Central command and message routing with comprehensive expense tracking commands
 
@@ -29,9 +37,9 @@ Preferred communication style: Simple, everyday language.
 - **JSON Configuration**: Environment-based configuration management for API keys and service credentials
 
 ## Authentication & Security
-- **Telegram Bot Token**: Secure bot authentication with Telegram's API
-- **Google Service Account**: JSON-based service account credentials for Sheets API access
-- **OpenAI API Key**: Secure API authentication for vision processing
+- **Telegram Bot Token**: Secure bot authentication with Telegram's API (TELEGRAM_BOT_TOKEN)
+- **Gemini API Key**: Free Google AI API authentication for vision processing (GEMINI_API_KEY)
+- **Google Sheets**: Public editable link integration for simplified data storage
 
 ## Processing Pipeline
 - **Receipt Processing**: Image upload → OpenAI Vision API → JSON extraction → Google Sheets storage
