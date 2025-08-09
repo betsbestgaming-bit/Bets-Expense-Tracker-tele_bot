@@ -8,7 +8,7 @@ This is an Indonesian Telegram expense tracking bot that helps users manage thei
 - ✓ Fixed all telegram package conflicts and import errors  
 - ✓ Configured automatic header creation in Google Sheets: Tanggal, Tipe, Jumlah, Kategori, Keterangan, Timestamp
 - ✓ System now runs successfully with logging mode when Google Sheets auth is not available
-- ✓ Integrated user's Google Sheets URL: 1q4g3gQb-8N6MEOi9rxtzf6U-izyQtss9tTn6xBlOCTg
+- ✓ Integrated user's Google Sheets Public URL: 
 
 # User Preferences
 
