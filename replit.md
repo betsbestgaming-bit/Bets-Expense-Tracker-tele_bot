@@ -1,0 +1,62 @@
+# Overview
+
+This is an Indonesian Telegram expense tracking bot that helps users manage their personal finances through multiple input methods. The bot can process receipt photos using OCR, voice messages, and text commands to automatically categorize and record expenses/income to Google Sheets. It provides comprehensive reporting features including daily, monthly, and yearly summaries with custom date range support.
+
+# User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+# System Architecture
+
+## Frontend Architecture
+- **Flask Web Application**: Simple web interface with Bootstrap styling for bot status and information display
+- **Telegram Bot Interface**: Primary user interaction through Telegram messaging platform
+- **Multi-modal Input Processing**: Supports text commands, photo uploads (receipt OCR), and voice messages
+
+## Backend Architecture
+- **Flask Application Server**: Lightweight web server handling webhook endpoints and web interface
+- **Event-driven Bot Handlers**: Asynchronous message processing using python-telegram-bot library
+- **Modular Service Architecture**: Separated concerns with dedicated services for OpenAI, Google Sheets, and date utilities
+
+## Core Services
+- **OpenAIService**: Receipt OCR using GPT-4o vision model for expense extraction from photos
+- **SheetsService**: Google Sheets integration for persistent data storage using service account authentication
+- **DateUtils**: Indonesian date parsing and formatting utilities with localized month names
+- **BotHandlers**: Central command and message routing with comprehensive expense tracking commands
+
+## Data Storage
+- **Google Sheets**: Primary data persistence layer storing transactions with columns for date, type, amount, category, description, and timestamp
+- **JSON Configuration**: Environment-based configuration management for API keys and service credentials
+
+## Authentication & Security
+- **Telegram Bot Token**: Secure bot authentication with Telegram's API
+- **Google Service Account**: JSON-based service account credentials for Sheets API access
+- **OpenAI API Key**: Secure API authentication for vision processing
+
+## Processing Pipeline
+- **Receipt Processing**: Image upload → OpenAI Vision API → JSON extraction → Google Sheets storage
+- **Voice Processing**: Voice message → transcription → expense parsing → data storage
+- **Text Processing**: Command parsing → validation → direct data storage
+- **Reporting Engine**: Date range queries → data aggregation → formatted summary generation
+
+# External Dependencies
+
+## APIs and Services
+- **Telegram Bot API**: Core messaging platform and webhook integration
+- **OpenAI GPT-4o Vision API**: Receipt OCR and expense data extraction from images
+- **Google Sheets API**: Data persistence and spreadsheet management
+- **Google Drive API**: Spreadsheet creation and access management
+
+## Python Libraries
+- **python-telegram-bot**: Telegram bot framework with async support
+- **openai**: Official OpenAI API client
+- **gspread**: Google Sheets Python integration
+- **google-oauth2**: Service account authentication
+- **flask**: Web application framework
+- **python-dotenv**: Environment variable management
+- **python-dateutil**: Enhanced date parsing capabilities
+
+## Development Dependencies
+- **Bootstrap 5.1.3**: Frontend UI framework via CDN
+- **Feather Icons**: Icon library for web interface
+- **logging**: Python standard library for application monitoring
