@@ -53,18 +53,34 @@ def index():
     return render_template('index.html')
 
 @app.route('/webhook', methods=['POST'])
-async def webhook():
+def webhook():
     """Handle incoming Telegram updates"""
     try:
+        global bot_application
         if bot_application is None:
-            create_bot_application()
+            bot_application = create_bot_application()
             
         # Get the update from Telegram
         update_data = request.get_json()
-        update = Update.de_json(update_data, bot_application.bot)
+        logger.info(f"Received webhook update: {update_data}")
         
-        # Process the update
-        await bot_application.process_update(update)
+        if update_data and bot_application:
+            update = Update.de_json(update_data, bot_application.bot)
+            
+            # Process the update in a new thread to avoid blocking
+            import threading
+            def process_update():
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(bot_application.process_update(update))
+                    loop.close()
+                except Exception as e:
+                    logger.error(f"Error in background processing: {e}")
+            
+            thread = threading.Thread(target=process_update)
+            thread.daemon = True
+            thread.start()
         
         return jsonify({'status': 'ok'})
     except Exception as e:
