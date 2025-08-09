@@ -5,7 +5,7 @@ import tempfile
 from datetime import datetime
 from telegram import Update
 from telegram.ext import ContextTypes
-from openai_service import OpenAIService
+from openai_service import GeminiService
 from sheets_service import SheetsService
 from date_utils import DateUtils
 from config import Config
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class BotHandlers:
     def __init__(self):
-        self.openai_service = OpenAIService()
+        self.gemini_service = GeminiService()
         self.sheets_service = SheetsService()
         self.date_utils = DateUtils()
     
@@ -284,8 +284,8 @@ Semua data akan tersimpan otomatis di Google Sheets Anda! 📊
             await file.download_to_memory(image_data)
             image_data.seek(0)
             
-            # Process with OpenAI Vision
-            expense_data = await self.openai_service.extract_expense_from_image(image_data.getvalue())
+            # Process with Gemini Vision
+            expense_data = await self.gemini_service.extract_expense_from_image(image_data.getvalue())
             
             if expense_data:
                 # Save to Google Sheets
@@ -331,11 +331,11 @@ Semua data akan tersimpan otomatis di Google Sheets Anda! 📊
             
             try:
                 # Transcribe audio
-                transcription = await self.openai_service.transcribe_audio(temp_path)
+                transcription = await self.gemini_service.transcribe_audio(temp_path)
                 
                 if transcription:
                     # Process transcription to extract expense data
-                    expense_data = await self.openai_service.extract_expense_from_text(transcription)
+                    expense_data = await self.gemini_service.extract_expense_from_text(transcription)
                     
                     if expense_data:
                         # Save to Google Sheets
@@ -383,7 +383,7 @@ Semua data akan tersimpan otomatis di Google Sheets Anda! 📊
             text = update.message.text
             
             # Try to extract expense data from text
-            expense_data = await self.openai_service.extract_expense_from_text(text)
+            expense_data = await self.gemini_service.extract_expense_from_text(text)
             
             if expense_data:
                 # Save to Google Sheets

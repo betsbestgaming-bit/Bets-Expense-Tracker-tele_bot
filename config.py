@@ -8,8 +8,8 @@ class Config:
     # Telegram Bot Configuration
     TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
     
-    # OpenAI Configuration
-    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+    # Gemini AI Configuration
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
     
     # Google Sheets Configuration
     GOOGLE_SHEETS_CREDENTIALS = os.getenv('GOOGLE_SHEETS_CREDENTIALS', '')
@@ -24,8 +24,7 @@ class Config:
         """Validate that all required configuration is present"""
         required_vars = [
             'TELEGRAM_BOT_TOKEN',
-            'OPENAI_API_KEY',
-            'GOOGLE_SHEETS_CREDENTIALS'
+            'GEMINI_API_KEY'
         ]
         
         missing_vars = []
